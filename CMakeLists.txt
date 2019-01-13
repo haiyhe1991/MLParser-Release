@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.0)
+project(MLParser)
+set(CMake_BUILD_TYPE Release)
+file(GLOB SOURCES src/*.c)
+file(GLOB SOURCES src/*.cpp)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_library(${PROJECT_NAME} STATIC ${SOURCES})
+
+install(TARGETS ${PROJECT_NAME} DESTINATION lib/${PROJECT_NAME})
+file(GLOB HEADERS include/*.h)
+file(GLOB HEADERS include/*.hpp)
+install(FILES ${HEADERS} DESTINATION include/${PROJECT_NAME})
