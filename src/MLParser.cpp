@@ -172,7 +172,7 @@ namespace Cyan
 	}
 	MLParser & MLParser::operator[](string tagName)
 	{
-		if (tagName == "") { now = root; return *this; }
+		if ( tagName == "" || (!okay) ) { now = root; return *this; }
 		if (now->child != nullptr)
 		{
 			if (now->child->tagName == tagName)
@@ -196,7 +196,7 @@ namespace Cyan
 	}
 	MLParser & MLParser::operator[](unsigned short n)
 	{
-		if (n == 0) { return *this; }
+		if (n == 0 || (!okay)) { now = root;  return *this; }
 		unsigned short i = 0;
 		Node *tNode = now->brother;
 		while (tNode != nullptr)
@@ -221,7 +221,7 @@ namespace Cyan
 		list<Result> result;
 		for (it = sTagName.lower_bound(name); it != sTagName.upper_bound(name); ++it)
 		{
-			result.push_back(Result(raw, it->second));
+			result.push_back(Result(this, it->second));
 		}
 		return result;
 	}
@@ -231,7 +231,7 @@ namespace Cyan
 		list<Result> result;
 		for (it = sAttribute.lower_bound(AttributeName); it != sAttribute.upper_bound(AttributeName); ++it)
 		{
-			result.push_back(Result(raw, it->second));
+			result.push_back(Result(this, it->second));
 		}
 		return result;
 	}

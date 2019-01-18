@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <list>
+#include <regex>
 using std::list;
 using std::multimap;
 using std::string;
@@ -13,11 +14,13 @@ namespace Cyan
 	typedef list<Result> Results;
 	class MLParser
 	{
+	friend class Result;
 	private:
 		char *raw;//saving raw text
 		Node *root;
 		Node *now;//saving a location for query
 		string errorMsg;
+		bool okay;
 		StrNode sTagName;//存储 <tagname,Node*> 元组，用于模糊查询
 		StrNode sAttribute;//用于模糊搜索
 		void Print(Cyan::Node * node, size_t count, bool printAttribute, bool printBrother);
@@ -41,8 +44,13 @@ namespace Cyan
 		{
 			sAttribute.insert(make_pair(name, node));
 		}
+		void SetErrMsg(string msg)
+		{
+			errorMsg = msg;
+			okay = false;
+		}
 	public:
-		MLParser() :raw(nullptr), root(nullptr), now(nullptr), errorMsg("") {}
+		MLParser() :raw(nullptr), root(nullptr), now(nullptr), errorMsg("") ,okay(true){}
 		MLParser(MLParser & MLP)
 		{
 			Copy(MLP);
@@ -57,15 +65,16 @@ namespace Cyan
 		void PrintTree(bool printAttributes = false);
 		MLParser & operator[](string tagName);
 		MLParser & operator[](unsigned short n);
-		MLParser & XPath(string xpath);
 		string GetTagName() 
 		{
+			if (!okay) return "";
 			string t = now->tagName;
 			now = root;
 			return t;
 		}
 		bool FindAttribute(const string & AttributeName,string & AttributeValue) 
 		{
+			if (!okay) return false;
 			string *ps = now->GetAttribute(AttributeName);
 			if (ps == nullptr)
 			{
@@ -77,9 +86,19 @@ namespace Cyan
 			now = root;
 			return true;
 		}
-		string GetContent() const;
+		string GetContent()
+		{
+			if (!okay) return "";
+			using std::regex;
+			string t = substr(raw + now->txtOffset, now->count);
+			regex exp("<([\\s\\S]+)>");
+			t = regex_replace(t, exp, "");
+			now = root;
+			return t;
+		}
 		string GetInner()
 		{
+			if (!okay) return "";
 			string t =  substr(raw + now->txtOffset, now->count);
 			now = root;
 			return t;
@@ -87,13 +106,17 @@ namespace Cyan
 		Results SearchByTagName(const string &name);
 		Results SearchByAttribute(const string &AttributeName);
 		Results SearchByAttribute(const string &AttributeName,const string &AttributeValue);
-		string GetErrorMsg() const
+		string GetErrorMsg()
 		{
+			//不需要重置now的状态
+			//在搜索时检测到okay为false
+			//会自动重置now=root
+			okay = true;//重置状态便于继续使用
 			return errorMsg;
 		}
-		void SetErrMsg(string msg)
+		bool OK() const
 		{
-			errorMsg = msg;
+			return okay;
 		}
 		void Dispose()
 		{
@@ -105,29 +128,33 @@ namespace Cyan
 	{
 		friend class MLParser;
 	private:
-		char *raw;
+		MLParser *ml;
 		Node *node;
-		Result(char *raw_, Node *node_) :raw(raw_), node(node_) {}
+		Result(MLParser *ml_, Node *node_) :ml(ml_), node(node_) {}
 	public:
+		MLParser &GetMLParser()
+		{
+			ml->now = node;
+			return *ml;
+		}
 		string GetTagName()
 		{
 			return node->tagName;
 		}
 		bool FindAttribute(const string & AttributeName, string & AttributeValue)
 		{
-			string *ps = node->GetAttribute(AttributeName);
-			if (ps == nullptr)
-			{
-				AttributeValue = "";
-				return false;
-			}
-			AttributeValue = string(*ps);
-			return true;
+			ml->now = node;
+			return ml->FindAttribute(AttributeName, AttributeValue);
 		}
-		string GetContent() const;
+		string GetContent()
+		{
+			ml->now = node;
+			return ml->GetContent();
+		}
 		string GetInner()
 		{
-			return substr(raw + node->txtOffset, node->count);
+			ml->now = node;
+			return ml->GetInner();
 		}
 		~Result() {}
 	};
