@@ -3,6 +3,10 @@
 #include <stack>
 #include <regex>
 #include <list>
+#ifndef USING_EXCEPTION_CYAN_MLPARSER
+#define USING_EXCEPTION_CYAN_MLPARSER 1
+#include "MLParser_exceptions.h"
+#endif // !USING_EXCEPTION_CYAN_MLPARSER
 using std::list;
 using std::stack;
 using std::string;
@@ -36,6 +40,23 @@ namespace Cyan
 	}
 	bool MLParser::Parse(string html)
 	{
+		if (root != nullptr)
+		{
+			if (*use_count == 1)
+			{
+				delete[] raw;
+				delete root;
+				delete use_count;
+				use_count = new int(1);
+				sTagName.clear();
+				sAttribute.clear();
+			}
+			else
+			{
+				--*use_count;
+			}
+		}
+
 		preprocess(html);
 		//initial Scanner & Scan
 		Scanner SC = Scanner(raw);
@@ -170,7 +191,7 @@ namespace Cyan
 			}
 		}
 	}
-	MLParser & MLParser::operator[](string tagName)
+	MLParser & MLParser::operator[](const string & tagName)
 	{
 		if ( tagName == "" || (!okay) ) { now = root; return *this; }
 		if (now->child != nullptr)
@@ -191,6 +212,9 @@ namespace Cyan
 				tNode = tNode->brother;
 			}
 		}
+#if defined(USING_EXCEPTION_CYAN_MLPARSER) && (USING_EXCEPTION_CYAN_MLPARSER == 1)
+		throw CantFindTag(tagName);
+#endif // USING_EXCEPTION_CYAN_MLPARSER
 		SetErrMsg("Can't find <" + tagName + ">");
 		return *this;
 	}
@@ -212,6 +236,9 @@ namespace Cyan
 			}
 			tNode = tNode->brother;
 		}
+#if defined(USING_EXCEPTION_CYAN_MLPARSER) && (USING_EXCEPTION_CYAN_MLPARSER == 1)
+		throw CantFindTag(now->tagName + "[" + std::to_string(n) + "]");
+#endif // USING_EXCEPTION_CYAN_MLPARSER
 		SetErrMsg("Can't find <" + now->tagName + ">[" + std::to_string(n) + "]");
 		return *this;
 	}

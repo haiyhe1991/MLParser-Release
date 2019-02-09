@@ -16,7 +16,6 @@ namespace Cyan
 		string name;
 		string value;
 		Attribute *next;
-	public:
 		Attribute(string name_, string value_) :name(name_), value(value_), next(nullptr) {}
 		~Attribute() { delete next; }
 	};
@@ -32,17 +31,6 @@ namespace Cyan
 		Attribute *attributes;
 		size_t txtOffset;// "[<]html>"
 		size_t count;//the number of characters counted from "[<]html>" to " </html[>] "
-		Node *Copy(Node *parent_)
-		{
-			Node *tNode = new Node(parent_);
-			tNode->tagName = tagName;
-			tNode->attributes = attributes;
-			tNode->txtOffset;
-			tNode->count;
-			tNode->brother = brother->Copy(parent_);
-			tNode->child = child->Copy(tNode);
-			return tNode;
-		}
 		Node *CreateChild()
 		{
 			if (child == nullptr)
@@ -108,7 +96,6 @@ namespace Cyan
 				return tA->next;
 			}
 		}
-	public:
 		Node()
 			:parent(nullptr),
 			brother(nullptr),

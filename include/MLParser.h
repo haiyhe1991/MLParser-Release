@@ -1,4 +1,8 @@
 #pragma once
+#ifndef USING_EXCEPTION_CYAN_MLPARSER
+#define USING_EXCEPTION_CYAN_MLPARSER 1
+#include "MLParser_exceptions.h"
+#endif // !USING_EXCEPTION_CYAN_MLPARSER
 #include "Node.hpp"
 #include <string>
 #include <map>
@@ -23,19 +27,9 @@ namespace Cyan
 		bool okay;
 		StrNode sTagName;//存储 <tagname,Node*> 元组，用于模糊查询
 		StrNode sAttribute;//用于模糊搜索
+		int *use_count;
 		void Print(Cyan::Node * node, size_t count, bool printAttribute, bool printBrother);
 		void preprocess(string &m);
-		void Copy(MLParser & MLP)
-		{
-			if (MLP.raw == this->raw) return;
-			this->Dispose();
-
-			this->raw = Cyan::strcpy(MLP.raw);
-
-			this->root = MLP.root->Copy(nullptr);
-			this->now = root;
-			this->errorMsg = nullptr;
-		}
 		void AddTag(Node *node)
 		{
 			sTagName.insert(make_pair(node->tagName, node));
@@ -50,20 +44,46 @@ namespace Cyan
 			okay = false;
 		}
 	public:
-		MLParser() :raw(nullptr), root(nullptr), now(nullptr), errorMsg("") ,okay(true){}
-		MLParser(MLParser & MLP)
+		MLParser() :raw(nullptr), root(nullptr), now(nullptr), errorMsg("") ,okay(true),use_count(new int(1)){}
+		MLParser(const MLParser & MLP)
 		{
-			Copy(MLP);
+			++*MLP.use_count;
+			use_count = MLP.use_count;
+			root = MLP.root;
+			now = MLP.now;
+			sTagName = MLP.sTagName;
+			sAttribute = MLP.sAttribute;
+			raw = MLP.raw;
 		}
-		MLParser & operator=(MLParser & MLP)
+		MLParser & operator=(const MLParser & MLP)
 		{
-			Copy(MLP);
+			++*MLP.use_count;
+			if (--*use_count == 0)
+			{
+				delete[] raw;
+				delete root;
+				delete use_count;
+			}
+			use_count = MLP.use_count;
+			root = MLP.root;
+			now = MLP.now;
+			sTagName = MLP.sTagName;
+			sAttribute = MLP.sAttribute;
+			raw = MLP.raw;
 			return *this;
 		}
-		~MLParser() {}
+		~MLParser()
+		{
+			if (--*use_count == 0)
+			{
+				delete[] raw;
+				delete root;
+				delete use_count;
+			}
+		}
 		bool Parse(string html);
 		void PrintTree(bool printAttributes = false);
-		MLParser & operator[](string tagName);
+		MLParser & operator[](const string & tagName);
 		MLParser & operator[](unsigned short n);
 		string GetTagName() 
 		{
@@ -72,12 +92,30 @@ namespace Cyan
 			now = root;
 			return t;
 		}
+		//string GetAttribute(const string & AttributeName);
+#if defined(USING_EXCEPTION_CYAN_MLPARSER) && (USING_EXCEPTION_CYAN_MLPARSER == 1)
+		string GetAttribute(const string & AttributeName)
+		{
+			if (!okay) return "";
+			string *ps = now->GetAttribute(AttributeName);
+			if (ps == nullptr)
+			{
+				throw CantFindAttribute(AttributeName);
+				return "";
+			}
+			now = root;
+			return string(*ps);
+		}
+#endif // USING_EXCEPTION_CYAN_MLPARSER
 		bool FindAttribute(const string & AttributeName,string & AttributeValue) 
 		{
 			if (!okay) return false;
 			string *ps = now->GetAttribute(AttributeName);
 			if (ps == nullptr)
 			{
+#if defined(USING_EXCEPTION_CYAN_MLPARSER) && (USING_EXCEPTION_CYAN_MLPARSER == 1)
+				throw CantFindAttribute(AttributeName);
+#endif // USING_EXCEPTION_CYAN_MLPARSER
 				SetErrMsg("Can't find Attribute '" + AttributeName + "'");
 				AttributeValue = "";
 				return false;
@@ -117,11 +155,6 @@ namespace Cyan
 		bool OK() const
 		{
 			return okay;
-		}
-		void Dispose()
-		{
-			delete[] raw;
-			delete root;
 		}
 	};
 	class Result

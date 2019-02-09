@@ -13,26 +13,24 @@ int main()
     string hStr("<html><head><title>Hello MLParser</title></head></html>");
     MLParser ml;
     ml.Parse(hStr);
-    try
+    ml["html"]["head"]["title"];
+    if(ml.OK())//请不要省略这一判断
     {
-        cout << ml["html"]["head"]["title"].GetInner() << endl;//也可以使用GetContent获得去除html标签后的内容
+        cout<<ml.GetInner()<<endl;
     }
-    catch (CantFindTag &cft)
+    else
     {
-        cout << cft.what() << endl;
-        //使用 ml.PrintTree() 打印树结构 检查是否解析正确
+        cout<<ml.GetErrorMsg()<<endl;
+        ml.PrintTree();//这个函数会打印解析产生的树结构，用来检查解析是否正确
     }
-    catch (CantFindAttribute &cfa)
-    {
-        cout << cfa.what() << endl;
-    }
+    ml.Dispose();//千万不要忘了这一步
     return 0;
 }
 ```
 以上代码输出：
-> * Hello MLParser
+>Hello MLParser
 ---------
-### 2.获取属性
+### 2.获取属性、获取（去除了HTML标签的）内容
 ```C++
 #include <iostream>
 #include <string>
@@ -44,26 +42,38 @@ int main()
     string hStr("<html><body><a herf="http://github.com/">Click Here!<img></img></a></body></html>");
     MLParser ml;
     ml.Parse(hStr);
-    try
+    ml["html"]["body"]["a"];
+    if(ml.OK())//请不要省略这一判断
     {
-        cout << ml["html"]["body"]["a"].GetAttribute("herf") << endl;
+        string attributeValue;
+        bool Founded = ml.FindAttribute("herf",attributeValue);
+        if(Founded)
+        {
+            cout<<attributeValue<<endl;
+        }
+        else
+        {
+            cout<<ml.GetErrorMsg()<<endl;
+        }
+        //以上是获取属性，下面是获取内容
+        cout<<ml.GetInner()<<endl;
+        cout<<ml.GetContent()<<endl;//这样获取的内容会把HTML标签去除
     }
-    catch (CantFindTag &cft)
+    else
     {
-        cout << cft.what() << endl;
-        //使用 ml.PrintTree() 打印树结构 检查是否解析正确
+        cout<<ml.GetErrorMsg()<<endl;
+        ml.PrintTree();//这个函数会打印解析产生的树结构，用来检查解析是否正确
     }
-    catch (CantFindAttribute &cfa)
-    {
-        cout << cfa.what() << endl;
-    }
+    ml.Dispose();//千万不要忘了这一步
     return 0;
 }
 ```
 以上代码输出：
-> * http://github.com/
-> * Click Here!`<img></img>`
-> * Click Here!
+>http://github.com/
+
+>Click Here!`<img></img>`
+
+>Click Here!
 ---------
 ### 3.搜索
 ```C++
@@ -87,5 +97,6 @@ int main()
 }
 ```
 以上代码输出：
-> * aaa
-> * bbb
+>aaa
+
+>bbb
