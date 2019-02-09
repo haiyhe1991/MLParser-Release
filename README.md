@@ -62,8 +62,6 @@ int main()
 ```
 以上代码输出：
 > * http://github.com/
-> * Click Here!`<img></img>`
-> * Click Here!
 ---------
 ### 3.搜索
 ```C++
